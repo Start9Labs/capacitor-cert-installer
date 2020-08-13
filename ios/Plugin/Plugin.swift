@@ -11,7 +11,7 @@ class ConfigServer: NSObject {
         case Stopped, Ready, InstalledConfig, BackToApp
     }
 
-    internal let listeningPort: in_port_t! = 8080
+    internal let listeningPort: in_port_t!
     internal var configName: String! = "Profile install"
     private var localServer: HttpServer!
     private var configData: Data!
@@ -26,8 +26,9 @@ class ConfigServer: NSObject {
         unregisterFromNotifications()
     }
 
-    init(configData: Data)
+    init(configData: Data, port: in_port_t)
     {
+        self.listeningPort = port
         super.init()
         self.configData = configData
         localServer = HttpServer()
@@ -68,7 +69,10 @@ class ConfigServer: NSObject {
             unregisterFromNotifications()
         }
     }
-
+    
+    func shutdown() {
+        return self.localServer.stop()
+    }
     //MARK:- Private functions
 
     private func setupHandlers()
@@ -91,11 +95,15 @@ class ConfigServer: NSObject {
                     try writer.write(self.configData)
                 }
             case .InstalledConfig:
-                return .ok(.html("<h1>GO TO SETTINGS</h1><br /><h2>General -> Profiles -> Downloaded Profile -> Install (x3)</h2><br /><h2>General -> About -> Certificate Trust Settings -> Enable Full Trust for Root Certificates</h2><br /><br /><br /><h3>TODO: make this pretty, add screenshots</h3>")) // TODO
+                return .ok(.html("<h1>GO TO SETTINGS</h1><br /><h2>General -> Profiles -> Downloaded Profile -> Install (x3)</h2><br /><h2>General -> About -> Certificate Trust Settings -> Enable Full Trust for Root Certificates</h2><br /><br /><br /><h3>TODO: make this pretty, add screenshots</h3><script>fetch(\"/shutdown\")</script>")) // TODO
             case .BackToApp:
                 let page = self.basePage(pathComponent: nil)
                 return .ok(.html(page))
             }
+        }
+        localServer["/shutdown"] = { request in
+            self.shutdown()
+            return .ok(.data(Data()))
         }
     }
 
@@ -183,7 +191,7 @@ class ConfigServer: NSObject {
 @objc(CertInstaller)
 public class CertInstaller: CAPPlugin {
     
-    var view: WKWebView?
+    var server: ConfigServer?
 
     @objc func installCert(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
@@ -191,8 +199,11 @@ public class CertInstaller: CAPPlugin {
                 call.error("value required")
                 return
             }
-            let server = ConfigServer(configData: value.data(using: .utf8)!)
-            let err = server.start()
+            let port = call.getInt("port") ?? 8080
+            self.server?.stop()
+            self.server?.shutdown()
+            self.server = ConfigServer(configData: value.data(using: .utf8)!, port: in_port_t(port))
+            let err = self.server!.start()
             if err == nil {
                 call.success()
             } else {
