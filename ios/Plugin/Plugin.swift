@@ -95,7 +95,7 @@ class ConfigServer: NSObject {
                     try writer.write(self.configData)
                 }
             case .InstalledConfig:
-                return .ok(.html("<h1>Additional instructions:</h1><ol><li>Go to Settings on your iOS device.</li><li>General -> Profiles -> Downloaded Profile -> Install -> (confirm 3x)</li><li>General -> About -> Certificate Trust Settings -> Enable Full Trust for Root Certificates</li></ol><script>fetch(\"/shutdown\")</script>"))
+                return .ok(.html("<h1>Additional instructions:</h1><ol><li>Go to Settings on your iOS device.</li><li>General -> Profiles -> Downloaded Profile -> Install</li><li>General -> About -> Certificate Trust Settings -> Enable Full Trust for Root Certificates</li></ol><script>fetch(\"/shutdown\")</script>"))
             case .BackToApp:
                 let page = self.basePage(pathComponent: nil)
                 return .ok(.html(page))
