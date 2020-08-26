@@ -15,6 +15,7 @@ class ConfigServer: NSObject {
     internal var configName: String! = "Profile install"
     private var localServer: HttpServer!
     private var configData: Data!
+    private var instructionLink: String!
 
     private var serverState: ConfigState = .Stopped
     private var startTime: NSDate!
@@ -26,11 +27,12 @@ class ConfigServer: NSObject {
         unregisterFromNotifications()
     }
 
-    init(configData: Data, port: in_port_t)
+    init(configData: Data, port: in_port_t, instructionLink: String)
     {
         self.listeningPort = port
         super.init()
         self.configData = configData
+        self.instructionLink = instructionLink
         localServer = HttpServer()
         self.setupHandlers()
     }
@@ -199,10 +201,14 @@ public class CertInstaller: CAPPlugin {
                 call.error("value required")
                 return
             }
+            guard let instructionLink = call.getString("iosInstructionLink") else {
+                call.error("iosInstructionLink required")
+                return
+            }
             let port = call.getInt("port") ?? 8080
             self.server?.stop()
             self.server?.shutdown()
-            self.server = ConfigServer(configData: value.data(using: .utf8)!, port: in_port_t(port))
+            self.server = ConfigServer(configData: value.data(using: .utf8)!, port: in_port_t(port), instructionLink: instructionLink)
             let err = self.server!.start()
             if err == nil {
                 call.success()

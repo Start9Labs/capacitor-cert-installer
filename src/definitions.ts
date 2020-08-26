@@ -5,5 +5,5 @@ declare module '@capacitor/core' {
 }
 
 export interface CertInstallerPlugin {
-  installCert(options: { value: string, name?: string, port?: number }): Promise<void>;
+  installCert(options: { value: string, iosInstructionLink: string, name?: string, port?: number }): Promise<void>;
 }
